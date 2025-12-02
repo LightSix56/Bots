@@ -9,7 +9,7 @@ GIGA_KEY = os.environ.get("GIGA_CREDENTIALS")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID")  # Ваш ID из секретов
 
 # 2. Токен бота (вручную)
-TG_BOT_TOKEN = "ВСТАВИТЬ_ВАШ_ТОКЕН_СЮДА"
+TG_BOT_TOKEN = "7370490889:AAHc934NvBAkH9YqwQR4nkB0EQMCKKp3TMg"
 
 CITIES = {
     "Podolsk": {"lat": 55.4242, "lon": 37.5447, "name": "Подольск"},
@@ -85,3 +85,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
