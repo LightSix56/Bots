@@ -1,32 +1,35 @@
-name: Check Mail
+name: Mail Check (Every 8h)
 
 on:
   schedule:
-    # Запуск каждые 8 часов (в 00:00, 08:00, 16:00 UTC)
+    # Запуск каждые 8 часов: в 00:00, 08:00 и 16:00 UTC
+    # (По Москве это 03:00, 11:00 и 19:00)
     - cron: '0 */8 * * *'
-  # Возможность запустить кнопку вручную для теста
+  
+  # Кнопка для ручного запуска (чтобы проверить в любой момент)
   workflow_dispatch:
 
 jobs:
-  build:
+  check-mail:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
 
-    - name: Install dependencies
-      run: |
-        pip install requests
+      - name: Install dependencies
+        run: pip install requests
 
-       - name: Run script
-      env:
-        MAIL_USER: ${{ secrets.MAIL_USER }}
-        MAIL_PASS: ${{ secrets.MAIL_PASS }}
-        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}  # Передаем ID
-      run: python mail_bot.py
+      - name: Run Mail Bot
+        env:
+          # Передаем секретные переменные в скрипт
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        # Убедитесь, что имя файла совпадает с тем, что вы загрузили!
+        run: python mail_bot.py
