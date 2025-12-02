@@ -24,10 +24,9 @@ jobs:
       run: |
         pip install requests
 
-    - name: Run script
+       - name: Run script
       env:
         MAIL_USER: ${{ secrets.MAIL_USER }}
         MAIL_PASS: ${{ secrets.MAIL_PASS }}
-        TG_TOKEN: ${{ secrets.TG_TOKEN }}
-        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python MailToTelegramProject.py
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}  # Передаем ID
+      run: python mail_bot.py
