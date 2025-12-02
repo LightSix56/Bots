@@ -14,7 +14,7 @@ EMAIL_PASS = os.environ.get("MAIL_PASS")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID")  # Ваш ID берем из секретов
 
 # 2. Токен бота (вручную)
-TG_BOT_TOKEN = "ВСТАВИТЬ_ВАШ_ТОКЕН_СЮДА"  # Например "123456:ABC-Def..."
+TG_BOT_TOKEN = "7370490889:AAHc934NvBAkH9YqwQR4nkB0EQMCKKp3TMg"  # Например "123456:ABC-Def..."
 
 IMAP_SERVER = "imap.mail.ru"
 
@@ -105,3 +105,4 @@ if __name__ == "__main__":
         print("❌ Ошибка: Нет паролей от почты в секретах!")
         sys.exit(1)
     check_mail()
+
