@@ -32,4 +32,4 @@ jobs:
           MAIL_PASS: ${{ secrets.MAIL_PASS }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         # Убедитесь, что имя файла совпадает с тем, что вы загрузили!
-        run: python mail_bot.py
+        run: python MailToTelegramProject.py
