@@ -1,0 +1,33 @@
+name: Check Mail
+
+on:
+  schedule:
+    # Запуск каждые 8 часов (в 00:00, 08:00, 16:00 UTC)
+    - cron: '0 */8 * * *'
+  # Возможность запустить кнопку вручную для теста
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install requests
+
+    - name: Run script
+      env:
+        MAIL_USER: ${{ secrets.MAIL_USER }}
+        MAIL_PASS: ${{ secrets.MAIL_PASS }}
+        TG_TOKEN: ${{ secrets.TG_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      run: python main.py
