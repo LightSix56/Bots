@@ -3,54 +3,48 @@ import email
 from email.header import decode_header
 import telebot
 from bs4 import BeautifulSoup
-import os  # Для работы с переменными окружения (секретами)
+import os
 
 # ================= НАСТРОЙКИ =================
 
-# Получаем данные из секретов GitHub Actions
-# Важно: os.environ.get("ИМЯ_СЕКРЕТА") должно совпадать с тем, что в .yml файле
 EMAIL_USER = os.environ.get("MAIL_USER")
 EMAIL_PASS = os.environ.get("MAIL_PASS")
 CHAT_ID = os.environ.get("TG_CHAT_ID")
+BOT_TOKEN = "8337778471:AAEFoM9hZ7aWCxNkdJEMbA9I7CCn5j8KoiI"  # Или os.environ.get("TG_BOT_TOKEN")
 
-# Если токена бота нет в секретах, вставьте его сюда строкой.
-# Если он тоже в секретах, замените на os.environ.get("TG_BOT_TOKEN")
-BOT_TOKEN = "8337778471:AAEFoM9hZ7aWCxNkdJEMbA9I7CCn5j8KoiI"  
+IMAP_SERVER = "imap.mail.ru"  # Для Mail.ru
 
-# Сервер вашей почты (если Yandex). Если Gmail/Mail.ru - поменяйте.
-IMAP_SERVER = "imap.mail.ru"  
+# --- СПИСОК ВАЖНЫХ АДРЕСОВ ---
+# Бот будет присылать письма ТОЛЬКО если они пришли от этих email-ов.
+# Можно писать часть адреса (например, "@mirea.ru" захватит всех с домена mirea)
+ALLOWED_SENDERS = [
+    "online@mirea.ru",     # Уведомления о заданиях
+    "ump@mirea.ru", # Другие уведомления вуза
+    "otsrochka@mirea.ru",      # Конкретный препод
+    "@mirea.ru"                # Любой адрес с концовкой @mirea.ru
+]
 
-# ================= ЛОГИКА ПАРСИНГА =================
+# ================= ЛОГИКА =================
 
 def clean_text(text):
-    """Удаляет пустые строки для красоты"""
     if not text: return ""
     lines = [line.strip() for line in text.splitlines()]
     return "\n".join(filter(None, lines))
 
 def get_email_body_with_links(msg):
-    """
-    Главная функция: достает текст и делает ссылки видимыми.
-    Превращает <a href="URL">Текст</a> -> Текст: [ URL ]
-    """
+    """Парсит текст и достает ссылки"""
     body = ""
     html_content = None
 
-    # 1. Разбираем письмо на части (Текст и HTML)
     if msg.is_multipart():
         for part in msg.walk():
             content_type = part.get_content_type()
             content_disposition = str(part.get("Content-Disposition"))
-
-            # Пропускаем вложения (файлы)
-            if "attachment" in content_disposition:
-                continue
+            if "attachment" in content_disposition: continue
 
             try:
                 payload = part.get_payload(decode=True)
                 if not payload: continue
-                
-                # Определяем кодировку
                 charset = part.get_content_charset() or 'utf-8'
                 decoded_part = payload.decode(charset, errors="ignore")
                 
@@ -58,60 +52,52 @@ def get_email_body_with_links(msg):
                     html_content = decoded_part
                 elif content_type == "text/plain" and html_content is None:
                     body = decoded_part
-            except Exception as e:
-                print(f"Ошибка декодирования части письма: {e}")
+            except: pass
     else:
-        # Письмо из одной части
         try:
             payload = msg.get_payload(decode=True)
             charset = msg.get_content_charset() or 'utf-8'
             decoded_part = payload.decode(charset, errors="ignore")
-            
             if msg.get_content_type() == "text/html":
                 html_content = decoded_part
             else:
                 body = decoded_part
-        except Exception as e:
-            print(f"Ошибка декодирования простого письма: {e}")
+        except: pass
 
-    # 2. Если нашли HTML, ищем в нем ссылки
     if html_content:
         soup = BeautifulSoup(html_content, "html.parser")
-        
-        # Находим все ссылки <a>
         for a in soup.find_all('a', href=True):
             url = a['href']
             text = a.get_text(strip=True)
-            
-            # Если ссылка скрыта под текстом (например "Перейти к заданию")
             if url and text:
-                # Меняем на формат: Текст [ Ссылка ]
-                new_tag = soup.new_string(f" {text} [ {url} ] ")
-                a.replace_with(new_tag)
+                a.replace_with(f" {text} [ {url} ] ")
             elif url:
                 a.replace_with(f" [ {url} ] ")
-        
-        # Достаем чистый текст уже с раскрытыми ссылками
         body = soup.get_text(separator="\n")
 
     return clean_text(body)
 
-# ================= ОСНОВНАЯ ФУНКЦИЯ =================
+def is_sender_allowed(sender_str):
+    """Проверяет, есть ли отправитель в белом списке"""
+    sender_str = sender_str.lower() # Приводим к нижнему регистру для надежности
+    for allowed in ALLOWED_SENDERS:
+        if allowed.lower() in sender_str:
+            return True
+    return False
 
 def check_email():
     if not EMAIL_USER or not EMAIL_PASS:
-        print("Ошибка: Не заданы логин/пароль в секретах GitHub!")
+        print("Ошибка: Нет секретов!")
         return
 
     bot = telebot.TeleBot(BOT_TOKEN)
 
     try:
-        # Подключение к почте
         mail = imaplib.IMAP4_SSL(IMAP_SERVER)
         mail.login(EMAIL_USER, EMAIL_PASS)
         mail.select("inbox")
 
-        # Ищем только НЕПРОЧИТАННЫЕ письма (UNSEEN)
+        # Ищем ВСЕ непрочитанные письма
         status, messages = mail.search(None, 'UNSEEN')
         email_ids = messages[0].split()
 
@@ -119,7 +105,7 @@ def check_email():
             print("Новых писем нет.")
             return
 
-        print(f"Найдено новых писем: {len(email_ids)}")
+        print(f"Найдено {len(email_ids)} непрочитанных писем. Фильтруем...")
 
         for e_id in email_ids:
             _, msg_data = mail.fetch(e_id, "(RFC822)")
@@ -127,44 +113,45 @@ def check_email():
                 if isinstance(response_part, tuple):
                     msg = email.message_from_bytes(response_part[1])
                     
-                    # Тема
-                    subject, encoding = decode_header(msg["Subject"])[0]
-                    if isinstance(subject, bytes):
-                        subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
-                    
-                    # Отправитель
+                    # Декодируем отправителя
                     sender, encoding = decode_header(msg["From"])[0]
                     if isinstance(sender, bytes):
                         sender = sender.decode(encoding if encoding else "utf-8", errors="ignore")
 
-                    # Текст письма (с сылками!)
+                    # === ГЛАВНЫЙ ФИЛЬТР ===
+                    if not is_sender_allowed(sender):
+                        print(f"Пропущено письмо от: {sender} (нет в белом списке)")
+                        continue # Пропускаем это письмо, идем к следующему
+                    
+                    # Если отправитель "Наш" - обрабатываем дальше
+                    subject, encoding = decode_header(msg["Subject"])[0]
+                    if isinstance(subject, bytes):
+                        subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
+
                     body = get_email_body_with_links(msg)
 
-                    # Если письмо слишком длинное для Telegram
                     if len(body) > 3500:
-                        body = body[:3500] + "\n...(письмо обрезано)"
+                        body = body[:3500] + "\n..."
 
                     text_message = (
-                        f"📩 <b>Новое письмо</b>\n\n"
+                        f"📩 <b>Важное письмо!</b>\n\n"
                         f"👤 <b>От:</b> {sender}\n"
                         f"📝 <b>Тема:</b> {subject}\n\n"
                         f"{body}"
                     )
 
                     try:
-                        # Отправляем в Telegram
                         bot.send_message(CHAT_ID, text_message, parse_mode="HTML", disable_web_page_preview=True)
-                        print(f"Письмо от {sender} отправлено в Telegram.")
+                        print(f"Отправлено письмо от {sender}")
                     except Exception as e:
-                        print(f"Ошибка отправки в TG: {e}")
-                        # Пробуем без HTML, если вдруг ошибка форматирования
+                        print(f"Ошибка отправки: {e}")
                         bot.send_message(CHAT_ID, text_message.replace("<", "").replace(">", ""))
 
         mail.close()
         mail.logout()
 
     except Exception as e:
-        print(f"Глобальная ошибка: {e}")
+        print(f"Ошибка IMAP: {e}")
 
 if __name__ == "__main__":
     check_email()
