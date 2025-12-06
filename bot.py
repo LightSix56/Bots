@@ -7,6 +7,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 from email.utils import parsedate_to_datetime
+import html
 
 # Получаем данные из secrets
 MAIL_USER = os.environ.get('MAIL_USER')
@@ -18,31 +19,45 @@ TG_BOT_TOKEN = '8337778471:AAEFoM9hZ7aWCxNkdJEMbA9I7CCn5j8KoiI'
 IMAP_SERVER = 'imap.mail.ru'
 IMAP_PORT = 993
 
-def send_telegram_message(text):
-    """Отправка сообщения в Telegram"""
+def send_telegram_message(text, use_html=True):
+    """Отправка сообщения в Telegram с обработкой ошибок"""
     url = f'https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage'
     
     # Разбиваем длинные сообщения (макс 4096 символов)
     max_length = 4096
-    if len(text) > max_length:
-        parts = [text[i:i+max_length] for i in range(0, len(text), max_length)]
-        for part in parts:
-            payload = {
-                'chat_id': TG_CHAT_ID,
-                'text': part,
-                'parse_mode': 'HTML',
-                'disable_web_page_preview': False
-            }
-            requests.post(url, json=payload)
-    else:
+    parts = [text[i:i+max_length] for i in range(0, len(text), max_length)]
+    
+    for part in parts:
         payload = {
             'chat_id': TG_CHAT_ID,
-            'text': text,
-            'parse_mode': 'HTML',
+            'text': part,
+            'parse_mode': 'HTML' if use_html else None,
             'disable_web_page_preview': False
         }
-        response = requests.post(url, json=payload)
-        return response.json()
+        
+        try:
+            response = requests.post(url, json=payload)
+            result = response.json()
+            
+            if not result.get('ok'):
+                print(f"⚠️ Ошибка Telegram API: {result.get('description')}")
+                
+                # Если ошибка парсинга HTML - пробуем без форматирования
+                if result.get('error_code') == 400 and use_html:
+                    print("🔁 Повторная отправка без HTML...")
+                    payload['parse_mode'] = None
+                    payload['text'] = part  # Отправляем как есть
+                    response2 = requests.post(url, json=payload)
+                    result2 = response2.json()
+                    if result2.get('ok'):
+                        print("✅ Отправлено без HTML форматирования")
+                    else:
+                        print(f"❌ Не удалось отправить: {result2.get('description')}")
+            else:
+                print("✅ Сообщение успешно отправлено")
+                
+        except Exception as e:
+            print(f"❌ Ошибка при отправке: {e}")
 
 def decode_mime_words(s):
     """Декодирование заголовков писем"""
@@ -63,22 +78,12 @@ def decode_mime_words(s):
             fragments.append(str(fragment))
     return ''.join(fragments)
 
-def extract_links_from_html(html_content):
-    """Извлечение всех ссылок из HTML, включая скрытые в тексте"""
-    soup = BeautifulSoup(html_content, 'html.parser')
-    
-    # Заменяем ссылки на текст с явным URL
-    for link in soup.find_all('a'):
-        href = link.get('href', '')
-        text = link.get_text()
-        if href:
-            # Создаем HTML ссылку для Telegram
-            link.replace_with(f'<a href="{href}">{text}</a>')
-    
-    return str(soup)
+def escape_html(text):
+    """Экранирование HTML символов для безопасной отправки в Telegram"""
+    return html.escape(text)
 
 def get_email_body(msg):
-    """Получение тела письма со всеми ссылками"""
+    """Получение тела письма"""
     body = ""
     html_body = ""
     
@@ -114,52 +119,54 @@ def get_email_body(msg):
         except:
             pass
     
-    # Приоритет HTML для извлечения ссылок
+    # Извлекаем текст и ссылки из HTML
     if html_body:
-        # Извлекаем текст и ссылки из HTML
         soup = BeautifulSoup(html_body, 'html.parser')
         
-        # Формируем текст со ссылками
+        # Извлекаем все ссылки
+        links = []
         for link in soup.find_all('a'):
             href = link.get('href', '')
-            text = link.get_text(strip=True)
-            if href and text:
-                # Заменяем на Telegram HTML формат
-                link.replace_with(f'<a href="{href}">{text}</a>')
-            elif href:
-                link.replace_with(f'<a href="{href}">{href}</a>')
+            if href and href.startswith('http'):
+                links.append(href)
         
-        # Убираем лишние теги, оставляем только текст и ссылки
-        for tag in soup.find_all():
-            if tag.name not in ['a', 'b', 'strong', 'i', 'em', 'u', 'code', 'pre']:
-                tag.unwrap()
+        # Получаем чистый текст
+        text = soup.get_text(separator='\n', strip=True)
         
-        return soup.get_text(separator='\n', strip=True).replace('\n\n\n', '\n\n')
+        # Добавляем ссылки в конец
+        if links:
+            text += "\n\n🔗 Ссылки в письме:\n" + "\n".join(links)
+        
+        return text
     
     return body
 
 def check_mail():
     """Проверка почты и отправка писем от @mirea.ru"""
     try:
+        print("📨 Подключение к Mail.ru...")
         # Подключение к Mail.ru
         mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
         mail.login(MAIL_USER, MAIL_PASS)
         mail.select('INBOX')
+        print("✅ Подключение успешно")
         
         # Получаем письма за последние 2 дня
         date_since = (datetime.now() - timedelta(days=2)).strftime("%d-%b-%Y")
+        print(f"🔍 Поиск писем с {date_since}...")
         
         # Поиск писем
         status, messages = mail.search(None, f'(SINCE {date_since})')
         
         if status != 'OK':
-            send_telegram_message("❌ Ошибка при поиске писем")
+            send_telegram_message("❌ Ошибка при поиске писем", use_html=False)
             return
         
         email_ids = messages[0].split()
+        print(f"📬 Найдено {len(email_ids)} писем за последние 2 дня")
         
         if not email_ids:
-            send_telegram_message("📭 Новых писем от @mirea.ru не найдено")
+            send_telegram_message("📭 Новых писем не найдено", use_html=False)
             return
         
         found_mirea = False
@@ -178,10 +185,13 @@ def check_mail():
                     # Получаем отправителя
                     from_header = decode_mime_words(msg.get('From', ''))
                     
+                    print(f"📧 Проверяю письмо от: {from_header}")
+                    
                     # Проверяем, что письмо от @mirea.ru
                     if '@mirea.ru' not in from_header.lower():
                         continue
                     
+                    print(f"✅ Найдено письмо от MIREA!")
                     found_mirea = True
                     
                     # Получаем данные письма
@@ -191,7 +201,6 @@ def check_mail():
                     # Парсим дату
                     try:
                         email_date = parsedate_to_datetime(date_header)
-                        # Конвертируем в МСК (UTC+3)
                         email_date_msk = email_date.astimezone()
                         date_str = email_date_msk.strftime("%d.%m.%Y %H:%M МСК")
                     except:
@@ -200,41 +209,41 @@ def check_mail():
                     # Получаем тело письма
                     body = get_email_body(msg)
                     
-                    # Формируем сообщение для Telegram
-                    telegram_msg = f"""
-📧 <b>Новое письмо от MIREA</b>
+                    # Экранируем HTML символы в заголовках
+                    from_safe = escape_html(from_header)
+                    subject_safe = escape_html(subject)
+                    
+                    # Формируем сообщение для Telegram (безопасно)
+                    telegram_msg = f"""📧 <b>Новое письмо от MIREA</b>
 
-<b>От:</b> {from_header}
-<b>Тема:</b> {subject}
+<b>От:</b> {from_safe}
+<b>Тема:</b> {subject_safe}
 <b>Дата:</b> {date_str}
 
 <b>Текст письма:</b>
-{body[:3000]}
+{escape_html(body[:2500])}
 """
                     
-                    if len(body) > 3000:
+                    if len(body) > 2500:
                         telegram_msg += "\n\n... (сообщение обрезано из-за длины)"
                     
+                    print("📤 Отправляю в Telegram...")
                     # Отправляем в Telegram
                     send_telegram_message(telegram_msg)
         
         if not found_mirea:
-            send_telegram_message("📭 Писем от @mirea.ru за последние 2 дня не найдено")
+            print("❌ Писем от @mirea.ru не найдено")
+            send_telegram_message("📭 Писем от @mirea.ru за последние 2 дня не найдено", use_html=False)
         
         mail.close()
         mail.logout()
         
     except Exception as e:
         error_msg = f"❌ Ошибка при проверке почты:\n{str(e)}"
-        send_telegram_message(error_msg)
+        send_telegram_message(error_msg, use_html=False)
         print(error_msg)
-
 
 if __name__ == "__main__":
     print("🤖 Запуск бота...")
     check_mail()
     print("✅ Проверка завершена")
-
-
-
-
