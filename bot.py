@@ -46,7 +46,7 @@ def send_telegram_message(text, use_html=True):
                 if result.get('error_code') == 400 and use_html:
                     print("🔁 Повторная отправка без HTML...")
                     payload['parse_mode'] = None
-                    payload['text'] = part  # Отправляем как есть
+                    payload['text'] = part
                     response2 = requests.post(url, json=payload)
                     result2 = response2.json()
                     if result2.get('ok'):
@@ -127,15 +127,25 @@ def get_email_body(msg):
         links = []
         for link in soup.find_all('a'):
             href = link.get('href', '')
+            text = link.get_text(strip=True)
             if href and href.startswith('http'):
-                links.append(href)
+                links.append({'url': href, 'text': text if text else href})
         
         # Получаем чистый текст
-        text = soup.get_text(separator='\n', strip=True)
+        text = soup.get_text(separator='
+', strip=True)
         
         # Добавляем ссылки в конец
         if links:
-            text += "\n\n🔗 Ссылки в письме:\n" + "\n".join(links)
+            text += '
+
+🔗 <b>Ссылки в письме:</b>
+'
+            for idx, link_data in enumerate(links, 1):
+                link_text = escape_html(link_data['text'][:50])
+                link_url = link_data['url']
+                text += f'{idx}. <a href="{link_url}">{link_text}</a>
+'
         
         return text
     
@@ -151,22 +161,22 @@ def check_mail():
         mail.select('INBOX')
         print("✅ Подключение успешно")
         
-        # Получаем письма за последние 2 дня
-        date_since = (datetime.now() - timedelta(days=2)).strftime("%d-%b-%Y")
-        print(f"🔍 Поиск писем с {date_since}...")
+        # Получаем письма только за ВЧЕРА и СЕГОДНЯ
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%d-%b-%Y")
+        print(f"🔍 Поиск НЕПРОЧИТАННЫХ писем с {yesterday}...")
         
-        # Поиск писем
-        status, messages = mail.search(None, f'(SINCE {date_since})')
+        # Поиск ТОЛЬКО непрочитанных писем за последние 2 дня
+        status, messages = mail.search(None, f'(UNSEEN SINCE {yesterday})')
         
         if status != 'OK':
             send_telegram_message("❌ Ошибка при поиске писем", use_html=False)
             return
         
         email_ids = messages[0].split()
-        print(f"📬 Найдено {len(email_ids)} писем за последние 2 дня")
+        print(f"📬 Найдено {len(email_ids)} непрочитанных писем")
         
         if not email_ids:
-            send_telegram_message("📭 Новых писем не найдено", use_html=False)
+            print("📭 Новых непрочитанных писем не найдено")
             return
         
         found_mirea = False
@@ -225,21 +235,27 @@ def check_mail():
 """
                     
                     if len(body) > 2500:
-                        telegram_msg += "\n\n... (сообщение обрезано из-за длины)"
+                        telegram_msg += "
+
+... (сообщение обрезано из-за длины)"
                     
                     print("📤 Отправляю в Telegram...")
                     # Отправляем в Telegram
                     send_telegram_message(telegram_msg)
+                    
+                    # ВАЖНО: Помечаем письмо как прочитанное
+                    mail.store(email_id, '+FLAGS', '\\Seen')
+                    print(f"✅ Письмо {email_id.decode()} помечено как прочитанное")
         
         if not found_mirea:
-            print("❌ Писем от @mirea.ru не найдено")
-            send_telegram_message("📭 Писем от @mirea.ru за последние 2 дня не найдено", use_html=False)
+            print("ℹ️ Непрочитанных писем от @mirea.ru не найдено")
         
         mail.close()
         mail.logout()
         
     except Exception as e:
-        error_msg = f"❌ Ошибка при проверке почты:\n{str(e)}"
+        error_msg = f"❌ Ошибка при проверке почты:
+{str(e)}"
         send_telegram_message(error_msg, use_html=False)
         print(error_msg)
 
