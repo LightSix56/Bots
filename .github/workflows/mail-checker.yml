@@ -1,4 +1,4 @@
-name: Mail Checker Bot(4h)
+name: Mail Checker Bot
 
 on:
   schedule:
@@ -29,5 +29,4 @@ jobs:
       env:
         MAIL_USER: ${{ secrets.MAIL_USER }}
         MAIL_PASS: ${{ secrets.MAIL_PASS }}
-        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
       run: python bot.py
