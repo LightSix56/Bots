@@ -229,21 +229,12 @@ def check_mail():
         send_telegram_message(error_msg)
         print(error_msg)
 
-def send_test_message():
-    """Отправка тестового сообщения для проверки связи"""
-    print("📨 Попытка отправить тестовое сообщение...")
-    try:
-        send_telegram_message("🔔 <b>Тест связи!</b>\n\nЕсли вы читаете это, значит токен и Chat ID верные, а бот работает.")
-        print("✅ Тестовое сообщение отправлено")
-    except Exception as e:
-        print(f"❌ Ошибка при отправке теста: {e}")
-
 
 if __name__ == "__main__":
     print("🤖 Запуск бота...")
-    send_test_message()
     check_mail()
     print("✅ Проверка завершена")
+
 
 
 
