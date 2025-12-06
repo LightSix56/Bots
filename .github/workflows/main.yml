@@ -1,38 +1,33 @@
-name: Mail Check (Every 8h)
+name: Mail Checker Bot(4h)
 
 on:
   schedule:
-    # Запуск каждые 8 часов: в 00:00, 08:00 и 16:00 UTC
-    # (По Москве это 03:00, 11:00 и 19:00)
-    - cron: '0 */8 * * *'
-  
-  # Кнопка для ручного запуска (чтобы проверить в любой момент)
-  workflow_dispatch:
+    # Каждые 4 часа по МСК (UTC+3): в 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 МСК
+    # В UTC это: 21:00, 01:00, 05:00, 09:00, 13:00, 17:00
+    - cron: '0 21,1,5,9,13,17 * * *'
+  workflow_dispatch: # Позволяет запустить вручную
 
 jobs:
   check-mail:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-
-      - name: Run Mail Bot
-        env:
-          # Передаем секретные переменные в скрипт
-          MAIL_USER: ${{ secrets.MAIL_USER }}
-          MAIL_PASS: ${{ secrets.MAIL_PASS }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-        # Убедитесь, что имя файла совпадает с тем, что вы загрузили!
-        run: python MailToTelegramProject.py
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run mail checker
+      env:
+        MAIL_USER: ${{ secrets.MAIL_USER }}
+        MAIL_PASS: ${{ secrets.MAIL_PASS }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      run: .py
