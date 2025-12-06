@@ -82,7 +82,6 @@ def escape_html(text):
     """Экранирование HTML символов для безопасной отправки в Telegram"""
     return html.escape(text)
 
-
 def get_email_body(msg):
     """Получение тела письма"""
     body = ""
@@ -120,9 +119,11 @@ def get_email_body(msg):
         except:
             pass
     
+    # Извлекаем текст и ссылки из HTML
     if html_body:
         soup = BeautifulSoup(html_body, 'html.parser')
         
+        # Извлекаем все ссылки
         links = []
         for link in soup.find_all('a'):
             href = link.get('href', '')
@@ -130,16 +131,21 @@ def get_email_body(msg):
             if href and href.startswith('http'):
                 links.append({'url': href, 'text': text if text else href})
         
-        newline = '
-'
-        text = soup.get_text(separator=newline, strip=True)
+        # Получаем чистый текст
+        text = soup.get_text(separator='
+', strip=True)
         
+        # Добавляем ссылки в конец
         if links:
-            text += newline + newline + '🔗 <b>Ссылки в письме:</b>' + newline
+            text += '
+
+🔗 <b>Ссылки в письме:</b>
+'
             for idx, link_data in enumerate(links, 1):
                 link_text = escape_html(link_data['text'][:50])
                 link_url = link_data['url']
-                text += f'{idx}. <a href="{link_url}">{link_text}</a>' + newline
+                text += f'{idx}. <a href="{link_url}">{link_text}</a>
+'
         
         return text
     
@@ -257,4 +263,3 @@ if __name__ == "__main__":
     print("🤖 Запуск бота...")
     check_mail()
     print("✅ Проверка завершена")
-
