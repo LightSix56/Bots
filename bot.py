@@ -133,8 +133,7 @@ def get_email_body(msg):
         
         # Получаем чистый текст
         # Получаем чистый текст
-        text = soup.get_text(separator='
-', strip=True)
+        text = soup.get_text(separator=' ', strip=True)
         
         # Добавляем ссылки в конец
         if links:
@@ -264,4 +263,5 @@ if __name__ == "__main__":
     print("🤖 Запуск бота...")
     check_mail()
     print("✅ Проверка завершена")
+
 
