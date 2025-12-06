@@ -132,20 +132,15 @@ def get_email_body(msg):
                 links.append({'url': href, 'text': text if text else href})
         
         # Получаем чистый текст
-        # Получаем чистый текст
-        text = soup.get_text(separator=' ', strip=True)
+        text = soup.get_text(separator='\n', strip=True)
         
         # Добавляем ссылки в конец
         if links:
-            text += '
-
-🔗 <b>Ссылки в письме:</b>
-'
+            text += '\n\n🔗 <b>Ссылки в письме:</b>\n'
             for idx, link_data in enumerate(links, 1):
                 link_text = escape_html(link_data['text'][:50])
                 link_url = link_data['url']
-                text += f'{idx}. <a href="{link_url}">{link_text}</a>
-'
+                text += f'{idx}. <a href="{link_url}">{link_text}</a>\n'
         
         return text
     
@@ -235,9 +230,7 @@ def check_mail():
 """
                     
                     if len(body) > 2500:
-                        telegram_msg += "
-
-... (сообщение обрезано из-за длины)"
+                        telegram_msg += "\n\n... (сообщение обрезано из-за длины)"
                     
                     print("📤 Отправляю в Telegram...")
                     # Отправляем в Telegram
@@ -254,8 +247,7 @@ def check_mail():
         mail.logout()
         
     except Exception as e:
-        error_msg = f"❌ Ошибка при проверке почты:
-{str(e)}"
+        error_msg = f"❌ Ошибка при проверке почты:\n{str(e)}"
         send_telegram_message(error_msg, use_html=False)
         print(error_msg)
 
@@ -263,5 +255,3 @@ if __name__ == "__main__":
     print("🤖 Запуск бота...")
     check_mail()
     print("✅ Проверка завершена")
-
-
