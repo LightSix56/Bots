@@ -11,8 +11,8 @@ from email.utils import parsedate_to_datetime
 # Получаем данные из secrets
 MAIL_USER = os.environ.get('MAIL_USER')
 MAIL_PASS = os.environ.get('MAIL_PASS')
-TG_CHAT_ID = os.environ.get('TG_CHAT_ID')
-TG_BOT_TOKEN = ('8337778471:AAEFoM9hZ7aWCxNkdJEMbA9I7CCn5j8KoiI')
+TG_CHAT_ID = '962277709'
+TG_BOT_TOKEN = '8337778471:AAEFoM9hZ7aWCxNkdJEMbA9I7CCn5j8KoiI'
 
 # Настройки Mail.ru
 IMAP_SERVER = 'imap.mail.ru'
@@ -233,4 +233,5 @@ if __name__ == "__main__":
     print("🤖 Запуск бота...")
     check_mail()
     print("✅ Проверка завершена")
+
 
