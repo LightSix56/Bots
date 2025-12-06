@@ -30,4 +30,4 @@ jobs:
         MAIL_USER: ${{ secrets.MAIL_USER }}
         MAIL_PASS: ${{ secrets.MAIL_PASS }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: MailToTelegramProject.py
+      run: python bot.py
