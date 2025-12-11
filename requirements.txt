@@ -5,3 +5,8 @@ gigachat
 feedparser
 requests
 python-dateutil
+gigachat
+feedparser
+requests
+python-dateutil
+
