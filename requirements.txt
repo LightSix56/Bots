@@ -1,7 +1,5 @@
 beautifulsoup4==4.12.3
 requests==2.31.0
 lxml==5.1.0
-gigachat
-feedparser
-requests
-python-dateutil
+feedparser==6.0.11
+openai==1.55.3
