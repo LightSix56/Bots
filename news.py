@@ -13,7 +13,7 @@ from gigachat import GigaChat  # Используем нативную библ�
 # 1. Секреты (как в твоем примере)
 GIGA_KEY = os.environ.get("GIGA_CREDENTIALS")
 TG_BOT_TOKEN = '8549981113:AAHM8q2C2e8VvFAjFSfgcR2HZtQUw6LVFqU' # Лучше брать из секретов, но можно вписать и вручную
-TG_CHAT_ID = '-5067157804'
+TG_CHAT_ID = -5067157804
 
 # Файл для хранения истории (чтобы не было повторов)
 SEEN_PATH = "seen.json"
