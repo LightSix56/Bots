@@ -3,3 +3,4 @@ requests==2.31.0
 lxml==5.1.0
 feedparser==6.0.11
 openai==1.55.3
+gigachat
