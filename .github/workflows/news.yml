@@ -1,0 +1,43 @@
+name: News Digest Bot
+
+on:
+  schedule:
+    # 10:00 MSK = 07:00 UTC
+    - cron: "0 7 * * *"
+  workflow_dispatch: # Кнопка ручного запуска
+
+permissions:
+  contents: write # Нужно для сохранения seen.json
+
+jobs:
+  run_bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run News Bot
+        env:
+          # Секреты нужно добавить в Settings -> Secrets -> Actions
+          GIGA_CREDENTIALS: ${{ secrets.GIGA_CREDENTIALS }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python news.py
+
+      - name: Commit seen.json
+        # Этот шаг сохраняет историю, чтобы завтра не прислать то же самое
+        run: |
+          git config user.name "NewsBot"
+          git config user.email "bot@example.com"
+          git add seen.json
+          # Commit только если файл изменился
+          git diff-index --quiet HEAD || git commit -m "Update seen news"
+          git push
