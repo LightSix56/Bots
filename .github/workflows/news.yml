@@ -2,8 +2,8 @@ name: News Digest Bot
 
 on:
   schedule:
-    # 10:00 MSK = 07:00 UTC
-    - cron: "0 7 * * *"
+    # 12:00 MSK = 09:00 UTC
+    - cron: "0 9 * * *"
   workflow_dispatch: # Кнопка ручного запуска
 
 permissions:
