@@ -28,8 +28,8 @@ jobs:
         env:
           # Секреты нужно добавить в Settings -> Secrets -> Actions
           GIGA_CREDENTIALS: ${{ secrets.GIGA_CREDENTIALS }}
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.NEWS_TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.NEWS_TG_CHAT_ID }}
         run: python news.py
 
       - name: Commit seen.json

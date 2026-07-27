@@ -13,8 +13,8 @@ from gigachat import GigaChat
 
 # Секреты из GitHub
 GIGA_KEY = os.environ.get("GIGA_CREDENTIALS")
-TG_BOT_TOKEN = '8549981113:AAHM8q2C2e8VvFAjFSfgcR2HZtQUw6LVFqU' # Лучше брать из секретов, но можно вписать и вручную
-TG_CHAT_ID = -5067157804
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "-5067157804")
 # Файл с уже отправленными новостями
 SEEN_PATH = "seen.json"
 
@@ -121,8 +121,11 @@ def send_telegram_html(text: str):
         }
 
         print(f"[TG] sending part {idx}/{len(parts)}, len={len(chunk)}")
-        r = requests.post(url, json=payload)
-        print("TG status:", r.status_code, r.text)
+        try:
+            r = requests.post(url, json=payload, timeout=15)
+            print("TG status:", r.status_code, r.text)
+        except requests.RequestException as e:
+            print(f"❌ Ошибка отправки в Telegram: {e}")
 
 
 # ================== GIGACHAT ==================
@@ -158,7 +161,12 @@ def collect_news():
 
     for feed_url in FEEDS:
         print("Парсим RSS:", feed_url)
-        d = feedparser.parse(feed_url)
+        try:
+            resp = requests.get(feed_url, timeout=15)
+            d = feedparser.parse(resp.content)
+        except requests.RequestException as e:
+            print(f"❌ Не удалось загрузить RSS {feed_url}: {e}")
+            continue
         for entry in d.entries:
             title = entry.get("title", "").strip()
             link = canonicalize_url(entry.get("link", "").strip())

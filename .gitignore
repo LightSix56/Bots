@@ -1,3 +1,5 @@
 .env
+bam.env
 __pycache__/
 data/*.json
+venv/

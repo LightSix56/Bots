@@ -31,6 +31,7 @@ jobs:
           # Передаем секретные переменные в скрипт
           WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
           GIGA_CREDENTIALS: ${{ secrets.GIGA_CREDENTIALS }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.WEATHER_TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.WEATHER_TG_CHAT_ID }}
         # Убедитесь, что имя файла совпадает!
         run: python weather_bot.py

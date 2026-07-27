@@ -29,4 +29,6 @@ jobs:
       env:
         MAIL_USER: ${{ secrets.MAIL_USER }}
         MAIL_PASS: ${{ secrets.MAIL_PASS }}
+        TG_BOT_TOKEN: ${{ secrets.MAIL_TG_BOT_TOKEN }}
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
       run: python bot.py

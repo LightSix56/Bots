@@ -8,8 +8,8 @@ WEATHER_KEY = os.environ.get("WEATHER_API_KEY")
 GIGA_KEY = os.environ.get("GIGA_CREDENTIALS")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID")  # Ваш ID из секретов
 
-# 2. Токен бота (вручную)
-TG_BOT_TOKEN = "7370490889:AAHc934NvBAkH9YqwQR4nkB0EQMCKKp3TMg"
+# 2. Токен бота (из секретов)
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN")
 
 CITIES = {
     "Podolsk": {"lat": 55.4242, "lon": 37.5447, "name": "Подольск"},
@@ -23,7 +23,7 @@ def send_telegram(text):
         return
     url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
     try:
-        requests.post(url, data={"chat_id": TG_CHAT_ID, "text": text, "parse_mode": "HTML"})
+        requests.post(url, data={"chat_id": TG_CHAT_ID, "text": text, "parse_mode": "HTML"}, timeout=15)
     except Exception as e:
         print(f"Ошибка TG: {e}")
 
@@ -31,7 +31,7 @@ def get_weather_data(lat, lon):
     url = f"https://api.openweathermap.org/data/2.5/weather"
     params = {"lat": lat, "lon": lon, "appid": WEATHER_KEY, "units": "metric", "lang": "ru"}
     try:
-        resp = requests.get(url, params=params)
+        resp = requests.get(url, params=params, timeout=15)
         if resp.status_code == 200: return resp.json()
     except: pass
     return None
@@ -85,4 +85,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

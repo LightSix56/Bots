@@ -12,8 +12,8 @@ import html
 # Получаем данные из secrets
 MAIL_USER = os.environ.get('MAIL_USER')
 MAIL_PASS = os.environ.get('MAIL_PASS')
-TG_CHAT_ID = '962277709'
-TG_BOT_TOKEN = '8337778471:AAEFoM9hZ7aWCxNkdJEMbA9I7CCn5j8KoiI'
+TG_CHAT_ID = os.environ.get('TG_CHAT_ID', '962277709')
+TG_BOT_TOKEN = os.environ.get('TG_BOT_TOKEN')
 
 # Настройки Mail.ru
 IMAP_SERVER = 'imap.mail.ru'
@@ -36,7 +36,7 @@ def send_telegram_message(text, use_html=True):
         }
         
         try:
-            response = requests.post(url, json=payload)
+            response = requests.post(url, json=payload, timeout=15)
             result = response.json()
             
             if not result.get('ok'):
@@ -47,7 +47,7 @@ def send_telegram_message(text, use_html=True):
                     print("🔁 Повторная отправка без HTML...")
                     payload['parse_mode'] = None
                     payload['text'] = part
-                    response2 = requests.post(url, json=payload)
+                    response2 = requests.post(url, json=payload, timeout=15)
                     result2 = response2.json()
                     if result2.get('ok'):
                         print("✅ Отправлено без HTML форматирования")
