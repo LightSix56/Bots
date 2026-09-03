@@ -18,8 +18,9 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
 
 # ================== НАСТРОЙКИ ==================
 
-TG_BOT_TOKEN = os.environ.get("NEWS_TG_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN") or os.environ.get("TG_BOT_TOKEN")
-TG_CHAT_ID = os.environ.get("NEWS_TG_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID") or os.environ.get("TG_CHAT_ID")
+TG_BOT_TOKEN = os.environ.get("NEWS_TG_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID")
+
 
 
 SEEN_PATH = "seen.json"

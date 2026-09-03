@@ -8,9 +8,10 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 if sys.stderr and hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-# Настройки Telegram (приоритет у специализированного токена погодного бота)
+# Настройки Telegram
 TG_BOT_TOKEN = os.environ.get("WEATHER_TG_BOT_TOKEN") or os.environ.get("TG_BOT_TOKEN")
-TG_CHAT_ID = os.environ.get("WEATHER_TG_CHAT_ID") or os.environ.get("TG_CHAT_ID")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID")
+
 
 
 CITIES = {
