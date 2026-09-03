@@ -2,10 +2,10 @@ name: Morning Weather
 
 on:
   schedule:
-    # 06:00 MSK = 03:00 UTC
-    - cron: '0 3 * * *'
+    # 04:00 MSK = 01:00 UTC
+    - cron: '0 1 * * *'
   
-  # Кнопка для ручного запуска
+  # Кнопка для ручного запуска в Actions
   workflow_dispatch:
 
 jobs:
@@ -14,23 +14,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
-        # Тут нам нужен еще и gigachat
-        run: pip install requests gigachat
+        run: pip install requests
 
       - name: Run Weather Bot
         env:
-          # Передаем секретные переменные в скрипт
-          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
-          GIGA_CREDENTIALS: ${{ secrets.GIGA_CREDENTIALS }}
-          TG_BOT_TOKEN: ${{ secrets.WEATHER_TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.WEATHER_TG_CHAT_ID }}
-        # Убедитесь, что имя файла совпадает!
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN || secrets.WEATHER_TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID || secrets.WEATHER_TG_CHAT_ID }}
         run: python weather_bot.py
+
