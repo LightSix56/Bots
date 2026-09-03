@@ -27,7 +27,9 @@ jobs:
 
       - name: Run Weather Bot
         env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN || secrets.WEATHER_TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID || secrets.WEATHER_TG_CHAT_ID }}
+          WEATHER_TG_BOT_TOKEN: ${{ secrets.WEATHER_TG_BOT_TOKEN }}
+          WEATHER_TG_CHAT_ID: ${{ secrets.WEATHER_TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.WEATHER_TG_BOT_TOKEN || secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.WEATHER_TG_CHAT_ID || secrets.TG_CHAT_ID }}
         run: python weather_bot.py
 
