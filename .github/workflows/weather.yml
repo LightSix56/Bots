@@ -2,8 +2,8 @@ name: Morning Weather
 
 on:
   schedule:
-    # 04:00 MSK = 01:00 UTC
-    - cron: '0 1 * * *'
+    # 03:53 MSK = 00:53 UTC
+    - cron: '53 0 * * *'
   
   # Кнопка для ручного запуска в Actions
   workflow_dispatch:

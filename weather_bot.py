@@ -29,11 +29,12 @@ CITIES = {
     }
 }
 
-# Временные срезы прогноза (часы в сутках МСК)
+# Временные интервалы прогноза (название, диапазон часов МСК)
 PERIODS = [
-    ("Утро", 8),
-    ("День", 14),
-    ("Вечер", 20)
+    ("06:00 – 10:00", range(6, 10)),
+    ("10:00 – 14:00", range(10, 14)),
+    ("14:00 – 18:00", range(14, 18)),
+    ("18:00 – 22:00", range(18, 22)),
 ]
 
 # Таблица кодов погоды WMO
@@ -109,21 +110,39 @@ def get_forecast(lat: float, lon: float) -> dict:
     resp.raise_for_status()
     return resp.json()["hourly"]
 
+def format_temp(val: int) -> str:
+    return f"+{val}" if val > 0 else str(val)
+
+def format_temp_range(min_val: int, max_val: int) -> str:
+    if min_val == max_val:
+        return f"{format_temp(min_val)}°C"
+    return f"{format_temp(min_val)}…{format_temp(max_val)}°C"
+
 def extract_city_periods(hourly_data: dict) -> dict:
-    """Извлекает данные для утра (08:00), дня (14:00) и вечера (20:00)."""
+    """Извлекает агрегированные данные по временным интервалам дня."""
     periods_data = {}
-    for name, hour in PERIODS:
-        w_text, icon = decode_weather(hourly_data["weathercode"][hour])
+    for name, hour_range in PERIODS:
+        temps = [round(hourly_data["temperature_2m"][h]) for h in hour_range]
+        feels = [round(hourly_data["apparent_temperature"][h]) for h in hour_range]
+        pops = [hourly_data["precipitation_probability"][h] for h in hour_range]
+        precips = [hourly_data["precipitation"][h] for h in hour_range]
+        winds = [round(hourly_data["windspeed_10m"][h]) for h in hour_range]
+        codes = [hourly_data["weathercode"][h] for h in hour_range]
+
+        rep_code = max(codes, key=lambda c: c)
+        w_text, icon = decode_weather(rep_code)
+
         periods_data[name] = {
-            "temp": round(hourly_data["temperature_2m"][hour]),
-            "feels": round(hourly_data["apparent_temperature"][hour]),
-            "pop": hourly_data["precipitation_probability"][hour],
-            "precip": hourly_data["precipitation"][hour],
-            "wind": round(hourly_data["windspeed_10m"][hour]),
-            "code": hourly_data["weathercode"][hour],
+            "min_temp": min(temps),
+            "max_temp": max(temps),
+            "min_feels": min(feels),
+            "max_feels": max(feels),
+            "pop": max(pops),
+            "precip": round(sum(precips), 1),
+            "wind": max(winds),
+            "code": rep_code,
             "desc": w_text,
             "icon": icon,
-            "hour": hour
         }
     return periods_data
 
@@ -138,7 +157,7 @@ def generate_advice(city_forecasts: dict) -> list:
     for city_key, periods in city_forecasts.items():
         city_name = CITIES[city_key]["name"]
         for p_name, p_data in periods.items():
-            all_feels.append(p_data["feels"])
+            all_feels.extend([p_data["min_feels"], p_data["max_feels"]])
             all_winds.append(p_data["wind"])
             code = p_data["code"]
             precip = p_data["precip"]
@@ -149,7 +168,7 @@ def generate_advice(city_forecasts: dict) -> list:
 
             if is_rain:
                 has_rain = True
-                rain_places.append(f"{city_name} ({p_name.lower()})")
+                rain_places.append(f"{city_name} ({p_name})")
             if is_snow:
                 has_snow = True
 
@@ -175,7 +194,7 @@ def generate_advice(city_forecasts: dict) -> list:
 
     # Если большой суточный перепад
     if max_feels - min_feels >= 8:
-        clothes += f" Заметный перепад (от {min_feels}°C до {max_feels}°C) — одевайся многослойно."
+        clothes += f" Заметный перепад (от {format_temp(min_feels)}°C до {format_temp(max_feels)}°C) — одевайся многослойно."
 
     # 2. Зонт / осадки
     if has_rain:
@@ -197,9 +216,6 @@ def generate_advice(city_forecasts: dict) -> list:
 
     return advice_items
 
-def format_temp(val: int) -> str:
-    return f"+{val}" if val > 0 else str(val)
-
 def build_message(city_forecasts: dict, advice: list) -> str:
     """Формирует итоговое красивое сообщение для Telegram."""
     lines = ["🌤 <b>Прогноз погоды на сегодня</b>\n"]
@@ -208,9 +224,9 @@ def build_message(city_forecasts: dict, advice: list) -> str:
         city_info = CITIES[city_key]
         lines.append(f"{city_info['icon']} <b>{city_info['name']}:</b>")
         for p_name, data in periods.items():
-            t = format_temp(data['temp'])
-            f = format_temp(data['feels'])
-            line = f"• {p_name} ({data['hour']:02d}:00): {data['icon']} <b>{t}°C</b> (ощущ. {f}°C), {data['desc']}"
+            t_str = format_temp_range(data['min_temp'], data['max_temp'])
+            f_str = format_temp_range(data['min_feels'], data['max_feels'])
+            line = f"• {p_name}: {data['icon']} <b>{t_str}</b> (ощущ. {f_str}), {data['desc']}"
             if data['pop'] >= 25 or data['precip'] > 0:
                 line += f" 💧 {data['pop']}%"
             lines.append(line)
