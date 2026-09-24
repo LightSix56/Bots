@@ -3,32 +3,61 @@ name: Mail Checker Bot
 on:
   schedule:
     # Раз в час, со сдвигом от начала часа (GitHub рекомендует избегать минуты 0
-    # из-за перегрузки в пиковые моменты). ~720 запусков/мес, бюджет с запасом.
+    # из-за перегрузки в пиковые моменты).
     - cron: '7 * * * *'
-  workflow_dispatch: # Позволяет запустить вручную
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Запуски не должны наслаиваться: зависший IMAP-сеанс раньше мог съесть
+# до 6 часов бюджета Actions и заблокировать последующие проверки.
+concurrency:
+  group: mail-checker
+  cancel-in-progress: false
 
 jobs:
   check-mail:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run mail checker
-      env:
-        MAIL_USER: ${{ secrets.MAIL_USER }}
-        MAIL_PASS: ${{ secrets.MAIL_PASS }}
-        TG_BOT_TOKEN: ${{ secrets.MAIL_TG_BOT_TOKEN }}
-        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python bot.py
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # История обработанных писем (Message-ID) живёт в кэше Actions, а не в
+      # git: иначе каждый запуск порождает служебный коммит в main.
+      - name: Restore state
+        uses: actions/cache/restore@v4
+        with:
+          path: data/mail_state.json
+          key: mail-state-${{ github.run_id }}
+          restore-keys: |
+            mail-state-
+
+      - name: Run mail checker
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_TG_BOT_TOKEN: ${{ secrets.MAIL_TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          STATE_PATH: data/mail_state.json
+        run: python bot.py
+
+      # Сохраняем всегда: при падении шага выше успешно обработанные письма
+      # не должны быть пересланы повторно.
+      - name: Save state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/mail_state.json
+          key: mail-state-${{ github.run_id }}

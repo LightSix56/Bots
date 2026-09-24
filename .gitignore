@@ -1,5 +1,7 @@
 .env
 bam.env
 __pycache__/
-data/*.json
+*.pyc
+data/
 venv/
+.pytest_cache/

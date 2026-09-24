@@ -4,13 +4,19 @@ on:
   schedule:
     # 03:53 MSK = 00:53 UTC
     - cron: '53 0 * * *'
-  
-  # Кнопка для ручного запуска в Actions
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morning-weather
+  cancel-in-progress: false
 
 jobs:
   send-weather:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -20,14 +26,31 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+          cache: pip
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r requirements.txt
+
+      # Состояние нужно только для кулдауна уведомлений об ошибках: без него
+      # недоступный API слал бы предупреждение при каждом запуске.
+      - name: Restore state
+        uses: actions/cache/restore@v4
+        with:
+          path: data/weather_state.json
+          key: weather-state-${{ github.run_id }}
+          restore-keys: |
+            weather-state-
 
       - name: Run Weather Bot
         env:
           WEATHER_TG_BOT_TOKEN: ${{ secrets.WEATHER_TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          STATE_PATH: data/weather_state.json
         run: python weather_bot.py
 
+      - name: Save state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/weather_state.json
+          key: weather-state-${{ github.run_id }}
