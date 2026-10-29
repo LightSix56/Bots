@@ -28,7 +28,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest already ships the Android SDK; just accept its licenses so Gradle can fetch missing parts
+      - name: Accept Android licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+        working-directory: .
 
       - uses: gradle/actions/setup-gradle@v4
 
